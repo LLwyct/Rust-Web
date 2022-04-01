@@ -27,6 +27,10 @@ impl<'a> Default for HttpResponse<'a> {
     }
 }
 
+/**
+ * 为Response实现From Trait
+ * from(res: HttpRespionse) -> String HTTP协议的标准
+ */
 impl<'a> From<HttpResponse<'a>> for String {
     fn from(res: HttpResponse) -> String {
         let res1 = res.clone();
