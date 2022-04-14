@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
 use std::fs;
+use urlencoding::decode;
+
 
 pub trait Handler {
     fn handle(req: &HttpRequest) -> HttpResponse;
@@ -11,8 +13,8 @@ pub trait Handler {
         let default_path = format!("{}/public", env!("CARGO_MANIFEST_DIR"));
         let public_path = env::var("PUBLIC_PATH").unwrap_or(default_path);
         let full_path = format!("{}/{}", public_path, file_name);
-
-        let contents = fs::read_to_string(full_path);
+        let full_path = decode(full_path.as_str()).unwrap();
+        let contents = fs::read_to_string(full_path.to_string());
         contents.ok()
     }
 }
@@ -55,6 +57,8 @@ impl Handler for StaticPageHandler {
                         headers.insert("Content-Type", "text/css");
                     } else if path.ends_with(".js") {
                         headers.insert("Content-Type", "text/javascript");
+                    } else if path.ends_with(".jpeg"){
+                        headers.insert("Content-Type", "image/jpeg");
                     } else {
                         headers.insert("Content-Type", "text/html");
                     }

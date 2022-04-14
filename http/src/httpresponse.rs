@@ -33,15 +33,15 @@ impl<'a> Default for HttpResponse<'a> {
  */
 impl<'a> From<HttpResponse<'a>> for String {
     fn from(res: HttpResponse) -> String {
-        let res1 = res.clone();
+        let res_else = res.clone();
         format!(
             "{} {} {}\r\n{}Content-Length: {}\r\n\r\n{}",
-            res1.version(),
-            res1.status_code(),
-            res1.status_text(),
-            res1.headers(),
-            res1.body().len(),
-            res1.body()
+            res_else.version(),
+            res_else.status_code(),
+            res_else.status_text(),
+            res_else.headers(),
+            res_else.body().len(),
+            res_else.body()
         )
     }
 }

@@ -1,14 +1,18 @@
 use http::{httprequest, httprequest::HttpRequest, httpresponse::HttpResponse};
-use std::{io::prelude::*, net::{TcpStream, TcpListener}};
+use std::net::TcpStream;
 use super::handler::{Handler, PageNotFoundHandler, StaticPageHandler, WebServiceHandler};
 use std::collections::HashMap;
 
-pub struct Router<'a>
+pub struct Router<'a, F>
+where
+    F: Fn(HttpRequest, &mut TcpStream)
 {
-    route_map: HashMap<&'a str, Box<dyn Fn(HttpRequest, &mut TcpStream)>>,
+    route_map: HashMap<&'a str, F>,
 }
 
-impl<'a> Router<'a>
+impl<'a, F> Router<'a, F>
+where
+    F: Fn(HttpRequest, &mut TcpStream)
 {
     pub fn new () -> Self
     {
@@ -21,20 +25,23 @@ impl<'a> Router<'a>
         match req.method {
             httprequest::Method::Get => match &req.resource {
                 httprequest::Resource::Path(s) => {
+                    // 获取get请求的路径 /xxx/xxx
                     let route: Vec<&str> = s.split("/").collect();
-                    match route[1] {
-                        "api" => {
-                            let res: HttpResponse = WebServiceHandler::handle(&req);
-                            let _ = res.send_response(write_stream);
-                        },
-                        "myself" => {
-                            let func = self.route_map.get("myself").unwrap();
-                            func(req, write_stream);
-                        },
-                        _ => {
-                            let res: HttpResponse = StaticPageHandler::handle(&req);
-                            let _ = res.send_response(write_stream);
-                        }
+                    // 如果是api请求，交给WebServiceHandler处理
+                    if route[1] == "api" {
+                        let res: HttpResponse = WebServiceHandler::handle(&req);
+                        let _ = res.send_response(write_stream);
+                    } else {
+                        // 否则判断该path是否在认为规定的路由表中
+                        match self.route_map.get(s.as_str()) {
+                            // 如果在，则使用提前写好的回调函数处理
+                            Some(func) => func(req, write_stream),
+                            // 否则交给StaticPageHandler处理
+                            None => {
+                                let res: HttpResponse = StaticPageHandler::handle(&req);
+                                let _ = res.send_response(write_stream);
+                            }
+                        };
                     }
                 }
             },
@@ -45,7 +52,7 @@ impl<'a> Router<'a>
         }
     }
 
-    pub fn add_route(&mut self, path: &'a str, func: Box<dyn Fn(HttpRequest, &mut TcpStream)>)
+    pub fn add_route(&mut self, path: &'a str, func: F)
     {
         self.route_map.insert(path, func);
     }
